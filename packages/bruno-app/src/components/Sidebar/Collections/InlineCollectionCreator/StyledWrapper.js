@@ -5,7 +5,7 @@ const StyledWrapper = styled.div`
     display: flex;
     align-items: center;
     gap: 4px;
-    height: 1.6rem;
+    height: 1.875rem;
     padding-left: 8px;
     padding-right: 4px;
   }

@@ -4,7 +4,7 @@ const Wrapper = styled.div`
   .empty-cta-message {
     display: flex;
     align-items: center;
-    height: 1.6rem;
+    height: 1.875rem;
     font-size: ${(props) => props.theme.font.size.sm};
     color: ${(props) => props.theme.sidebar.muted};
 

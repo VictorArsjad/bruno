@@ -1,7 +1,7 @@
 import { css } from 'styled-components';
 
 const sidebarRowStyles = ({ selectedClass, keyboardFocusedClass, actionsClass }) => css`
-  height: 1.6rem;
+  height: 1.875rem;
   cursor: pointer;
   user-select: none;
   border-left: 4px solid transparent;
