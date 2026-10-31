@@ -4,7 +4,7 @@
 # First time (or after a clean):
 #   make setup && make pack-mac
 
-.PHONY: help setup ensure-deps ensure-node dev build-web build-mac pack-mac
+.PHONY: help setup ensure-deps ensure-node dev build-web prepare-electron-web build-mac pack-mac
 
 # Load nvm when available so recipes use the .nvmrc Node version.
 # Homebrew installs nvm.sh under $(brew --prefix)/opt/nvm/, not under ~/.nvm.
@@ -53,14 +53,21 @@ dev: ensure-deps
 build-web: ensure-deps
 	@$(NVM_USE); npm run build:web
 
+# Copy the React build into electron/web and rewrite absolute /static/ paths for file://.
+# Mirrors scripts/build-electron.sh / scripts/build-electron.js.
+prepare-electron-web: build-web
+	rm -rf packages/bruno-electron/web
+	mkdir packages/bruno-electron/web
+	cp -r packages/bruno-app/dist/* packages/bruno-electron/web
+	sed -i'' -e 's@/static/@./static/@g' packages/bruno-electron/web/*.html
+	sed -i'' -e 's@/static/font@../../static/font@g' packages/bruno-electron/web/static/css/*.css
+	find packages/bruno-electron/web -name '*.map' -type f -delete
+
 # Full mac distribution (.dmg / .pkg / .zip) under packages/bruno-electron/out/
 build-mac: build-web
 	@$(NVM_USE); CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:electron:mac -- -c.mac.identity=null
 
 # Unpacked .app only (faster). Open packages/bruno-electron/out/mac*/Bruno.app
-pack-mac: build-web
+pack-mac: prepare-electron-web
 	@$(NVM_USE); \
-	rm -rf packages/bruno-electron/web && \
-	mkdir packages/bruno-electron/web && \
-	cp -r packages/bruno-app/dist/* packages/bruno-electron/web && \
-	CSC_IDENTITY_AUTO_DISCOVERY=false npm run pack --workspace=packages/bruno-electron -- -c.mac.identity=null
+	CSC_IDENTITY_AUTO_DISCOVERY=false npm run pack --workspace=packages/bruno-electron -- --config electron-builder-config.js -c.mac.identity=null
