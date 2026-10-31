@@ -138,7 +138,7 @@ const Collections = ({ showSearch, isCreatingCollection, onCreateClick, onDismis
           style={{ height: '100%' }}
           data={rows}
           computeItemKey={(_, row) => row.id}
-          defaultItemHeight={26}
+          defaultItemHeight={30}
           increaseViewportBy={{ top: 400, bottom: 600 }}
           itemContent={(_, row) => (
             <SidebarRow

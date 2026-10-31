@@ -4,7 +4,7 @@ const Wrapper = styled.div`
   .git-collection-row {
     display: flex;
     align-items: center;
-    height: 1.6rem;
+    height: 1.875rem;
     cursor: pointer;
     user-select: none;
     padding-left: 4px;
