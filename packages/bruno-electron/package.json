@@ -1,7 +1,7 @@
 {
   "version": "2.0.0",
-  "name": "bruno",
-  "description": "Opensource API Client for Exploring and Testing APIs",
+  "name": "poodle",
+  "description": "Local poodle build of Bruno (API Client)",
   "homepage": "https://www.usebruno.com",
   "repository": {
     "type": "git",

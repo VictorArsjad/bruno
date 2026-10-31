@@ -3,8 +3,9 @@ require('dotenv').config({ path: process.env.DOTENV_PATH });
 const isBenchmark = process.env.BRUNO_BENCHMARK === 'true';
 
 const config = {
-  appId: 'com.usebruno.app',
-  productName: isBenchmark ? 'Bruno Benchmark' : 'Bruno',
+  // Distinct appId so this local "poodle" build can sit beside official Bruno.
+  appId: 'com.usebruno.poodle',
+  productName: isBenchmark ? 'Bruno Benchmark' : 'poodle',
   extraMetadata: {
     brunoBuild: {
       benchmark: isBenchmark,
