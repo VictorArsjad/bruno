@@ -1,7 +1,8 @@
 {
   "version": "2.0.0",
   "name": "poodle",
-  "description": "Local poodle build of Bruno (API Client)",
+  "productName": "Poodle",
+  "description": "Local Poodle build of Bruno (API Client)",
   "homepage": "https://www.usebruno.com",
   "repository": {
     "type": "git",
