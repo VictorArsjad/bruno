@@ -7,6 +7,8 @@ describe('keyMappings display helpers', () => {
   it('formats default shortcuts for display', () => {
     expect(getKeyBindingDisplayTextByOS('sendRequest', undefined, 'windows')).toBe('Ctrl + Enter');
     expect(getKeyBindingDisplayTextByOS('sendRequest', undefined, 'mac')).toBe('⌘ + ↩');
+    expect(getKeyBindingDisplayTextByOS('generateCode', undefined, 'windows')).toBe('Ctrl + Shift + G');
+    expect(getKeyBindingDisplayTextByOS('generateCode', undefined, 'mac')).toBe('⇧ + ⌘ + G');
   });
 
   it('uses user keybinding overrides before formatting shortcuts', () => {

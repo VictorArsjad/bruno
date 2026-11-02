@@ -168,6 +168,12 @@ const CollectionItemRow = ({
     return false;
   }, { enabled: isKeyboardFocused && isFolder, deps: [isKeyboardFocused, isFolder] });
 
+  const canGenerateCode = !isFolder && (item.type === 'http-request' || item.type === 'graphql-request');
+  useKeybinding('generateCode', () => {
+    handleGenerateCode();
+    return false;
+  }, { enabled: isKeyboardFocused && canGenerateCode, deps: [isKeyboardFocused, canGenerateCode] });
+
   const [dropType, setDropType] = useState(null); // 'above', 'inside' or 'below'
 
   const [{ isDragging }, drag, dragPreview] = useDrag({
@@ -495,6 +501,7 @@ const CollectionItemRow = ({
         id: 'generate-code',
         leftSection: IconCode,
         label: 'Generate Code',
+        shortcut: getKeybindingDisplayText('generateCode'),
         onClick: handleGenerateCode
       });
     }
