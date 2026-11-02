@@ -56,6 +56,7 @@ export const KEY_BINDING_SECTIONS = [
     bindings: {
       importCollection: { mac: 'command+bind+o', windows: 'ctrl+bind+o', name: 'Import Collection' }, // D
       editEnvironment: { mac: 'command+bind+e', windows: 'ctrl+bind+e', name: 'Edit Environment' }, // D
+      switchEnvironment: { mac: 'command+bind+shift+bind+e', windows: 'ctrl+bind+shift+bind+e', name: 'Switch Environment' }, // D
       newRequest: { mac: 'command+bind+n', windows: 'ctrl+bind+n', name: 'New Request' } // D
     }
   },

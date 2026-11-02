@@ -13,9 +13,19 @@ const EnvironmentListContent = ({
   onCreateClick,
   onImportClick,
   searchText,
-  setSearchText
+  setSearchText,
+  searchInputRef: searchInputRefProp
 }) => {
-  const searchInputRef = useRef(null);
+  const localSearchInputRef = useRef(null);
+  const searchInputRef = searchInputRefProp || localSearchInputRef;
+
+  const filteredEnvs = useMemo(() => {
+    const trimmedSearchText = searchText?.trim()?.toLowerCase();
+    if (!trimmedSearchText) {
+      return environments || [];
+    }
+    return (environments || []).filter((env) => env.name.toLowerCase().includes(trimmedSearchText));
+  }, [environments, searchText]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
@@ -24,6 +34,19 @@ const EnvironmentListContent = ({
         setSearchText('');
       }
       searchInputRef.current?.blur();
+      return;
+    }
+
+    // Confirm the top search match (or the only match) without leaving the keyboard.
+    if (e.key === 'Enter') {
+      const trimmedSearchText = searchText?.trim();
+      if (!trimmedSearchText || filteredEnvs.length === 0) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      onEnvironmentSelect(filteredEnvs[0]);
     }
   };
 
@@ -51,15 +74,10 @@ const EnvironmentListContent = ({
     return () => {
       document.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, []);
+  }, [searchInputRef]);
 
-  const filteredEnvs = useMemo(() => {
-    const trimmedSearchText = searchText?.trim()?.toLowerCase();
-    if (!trimmedSearchText) {
-      return environments || [];
-    }
-    return (environments || []).filter((env) => env.name.toLowerCase().includes(trimmedSearchText));
-  }, [environments, searchText]);
+  const trimmedSearchText = searchText?.trim();
+  const focusedEnvUid = trimmedSearchText && filteredEnvs.length > 0 ? filteredEnvs[0].uid : null;
 
   return (
     <div>
@@ -108,7 +126,9 @@ const EnvironmentListContent = ({
                   filteredEnvs.map((env) => (
                     <div
                       key={env.uid}
-                      className={`dropdown-item ${env.uid === activeEnvironmentUid ? 'dropdown-item-active' : ''}`}
+                      className={`dropdown-item ${env.uid === activeEnvironmentUid ? 'dropdown-item-active' : ''} ${
+                        env.uid === focusedEnvUid ? 'dropdown-item-focused' : ''
+                      }`}
                       onClick={() => onEnvironmentSelect(env)}
                       data-tooltip-id="environment-name-tooltip"
                       data-tooltip-content={env.name}
