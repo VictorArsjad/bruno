@@ -14,6 +14,7 @@ import CreateGlobalEnvironment from 'components/WorkspaceHome/WorkspaceEnvironme
 import ToolHint from 'components/ToolHint';
 import StyledWrapper from './StyledWrapper';
 import { transparentize } from 'polished';
+import useKeybinding from 'hooks/useKeybinding';
 
 const TABS = [
   { id: 'collection', label: 'Collection', icon: <IconDatabase size={16} strokeWidth={1.5} /> },
@@ -184,6 +185,7 @@ const DropdownTrigger = forwardRef(({ collectionEnv, globalEnv }, ref) => {
 const EnvironmentSelector = ({ collection }) => {
   const dispatch = useDispatch();
   const dropdownTippyRef = useRef();
+  const searchInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('collection');
   const [showCreateGlobalModal, setShowCreateGlobalModal] = useState(false);
   const [showImportGlobalModal, setShowImportGlobalModal] = useState(false);
@@ -211,6 +213,24 @@ const EnvironmentSelector = ({ collection }) => {
   const description = EMPTY_STATE_DESCRIPTIONS[activeTab];
 
   const hideDropdown = () => dropdownTippyRef.current?.hide();
+
+  const focusSearchInput = () => {
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  };
+
+  useKeybinding('switchEnvironment', () => {
+    const tippy = dropdownTippyRef.current;
+    if (!tippy) return false;
+
+    if (tippy.state?.isVisible) {
+      tippy.hide();
+    } else {
+      tippy.show();
+    }
+    return false;
+  });
 
   const handleEnvironmentSelect = (environment) => {
     const action
@@ -273,6 +293,7 @@ const EnvironmentSelector = ({ collection }) => {
       <div className="environment-selector flex align-center cursor-pointer">
         <Dropdown
           onCreate={(ref) => (dropdownTippyRef.current = ref)}
+          onShown={focusSearchInput}
           onHidden={() => setSearchText('')}
           icon={<DropdownTrigger collectionEnv={activeCollectionEnvironment} globalEnv={activeGlobalEnvironment} />}
           placement="bottom-end"
@@ -289,6 +310,7 @@ const EnvironmentSelector = ({ collection }) => {
                 onClick={() => {
                   setActiveTab(tab.id);
                   setSearchText('');
+                  focusSearchInput();
                 }}
                 data-testid={`env-tab-${tab.id}`}
               >
@@ -306,6 +328,7 @@ const EnvironmentSelector = ({ collection }) => {
               key={activeTab}
               searchText={searchText}
               setSearchText={setSearchText}
+              searchInputRef={searchInputRef}
               environments={activeTab === 'collection' ? environments : globalEnvironments}
               activeEnvironmentUid={activeTab === 'collection' ? activeEnvironmentUid : activeGlobalEnvironmentUid}
               description={description}

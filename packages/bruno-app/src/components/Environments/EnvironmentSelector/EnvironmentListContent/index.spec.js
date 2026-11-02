@@ -140,6 +140,41 @@ describe('EnvironmentListContent', () => {
       expect(searchInput).toHaveValue('');
       expect(screen.getAllByTestId('env-list-item')).toHaveLength(3);
     });
+
+    it('should select the top search match when pressing Enter', async () => {
+      renderWithTheme(<EnvironmentListContentWrapper {...defaultProps} />);
+      const user = userEvent.setup();
+
+      const searchInput = screen.getByTestId('env-search-input');
+      await user.type(searchInput, 'stag');
+      await user.keyboard('{Enter}');
+
+      expect(mockOnEnvironmentSelect).toHaveBeenCalledWith(mockEnvironments[1]);
+      expect(mockOnEnvironmentSelect).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not select an environment on Enter when search is empty', async () => {
+      renderWithTheme(<EnvironmentListContentWrapper {...defaultProps} />);
+      const user = userEvent.setup();
+
+      const searchInput = screen.getByTestId('env-search-input');
+      await user.click(searchInput);
+      await user.keyboard('{Enter}');
+
+      expect(mockOnEnvironmentSelect).not.toHaveBeenCalled();
+    });
+
+    it('should highlight the top search match while filtering', async () => {
+      renderWithTheme(<EnvironmentListContentWrapper {...defaultProps} />);
+      const user = userEvent.setup();
+
+      const searchInput = screen.getByTestId('env-search-input');
+      await user.type(searchInput, 'stag');
+
+      const envItems = screen.getAllByTestId('env-list-item');
+      expect(envItems).toHaveLength(1);
+      expect(envItems[0]).toHaveClass('dropdown-item-focused');
+    });
   });
 
   describe('Interactions', () => {

@@ -41,7 +41,8 @@ export const KEY_BINDING_SECTIONS = [
     bindings: {
       sendRequest: { mac: 'command+bind+enter', windows: 'ctrl+bind+enter', name: 'Send Request' }, // D
       changeLayout: { mac: 'command+bind+j', windows: 'ctrl+bind+j', name: 'Change Orientation' }, // D
-      prettify: { mac: 'alt+bind+shift+bind+f', windows: 'alt+bind+shift+bind+f', name: 'Prettify' } // D
+      prettify: { mac: 'alt+bind+shift+bind+f', windows: 'alt+bind+shift+bind+f', name: 'Prettify' }, // D
+      generateCode: { mac: 'command+bind+shift+bind+g', windows: 'ctrl+bind+shift+bind+g', name: 'Generate Code' } // D
     }
   },
   {
@@ -55,6 +56,7 @@ export const KEY_BINDING_SECTIONS = [
     bindings: {
       importCollection: { mac: 'command+bind+o', windows: 'ctrl+bind+o', name: 'Import Collection' }, // D
       editEnvironment: { mac: 'command+bind+e', windows: 'ctrl+bind+e', name: 'Edit Environment' }, // D
+      switchEnvironment: { mac: 'command+bind+shift+bind+e', windows: 'ctrl+bind+shift+bind+e', name: 'Switch Environment' }, // D
       newRequest: { mac: 'command+bind+n', windows: 'ctrl+bind+n', name: 'New Request' } // D
     }
   },

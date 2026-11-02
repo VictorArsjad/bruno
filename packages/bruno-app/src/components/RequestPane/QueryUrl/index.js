@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import get from 'lodash/get';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   requestUrlChanged,
   updateRequestMethod,
@@ -19,20 +19,23 @@ import { useTheme } from 'providers/Theme';
 import { IconDeviceFloppy, IconCode } from '@tabler/icons';
 import SingleLineEditor from 'components/SingleLineEditor';
 import SendButton from 'components/RequestPane/SendButton';
-import { isMacOS } from 'utils/common/platform';
 import { hasRequestChanges } from 'utils/collections';
 import StyledWrapper from './StyledWrapper';
 import GenerateCodeItem from 'components/Sidebar/Collections/Collection/CollectionItem/GenerateCodeItem/index';
 import ToolHint from 'components/ToolHint';
 import toast from 'react-hot-toast';
+import useKeybinding from 'hooks/useKeybinding';
+import useKeybindingDisplayText from 'hooks/useKeybindingDisplayText';
 
 const QueryUrl = ({ item, collection, handleRun }) => {
   const { theme, storedTheme } = useTheme();
   const dispatch = useDispatch();
   const method = item.draft ? get(item, 'draft.request.method') : get(item, 'request.method');
   const url = item.draft ? get(item, 'draft.request.url', '') : get(item, 'request.url', '');
-  const isMac = isMacOS();
-  const saveShortcut = isMac ? 'Cmd + S' : 'Ctrl + S';
+  const getKeybindingDisplayText = useKeybindingDisplayText();
+  const saveShortcut = getKeybindingDisplayText('save');
+  const generateCodeShortcut = getKeybindingDisplayText('generateCode');
+  const focusedSidebarPath = useSelector((state) => state.app.focusedSidebarPath);
   const editorRef = useRef(null);
   const isLoading = ['queued', 'sending'].includes(item.requestState);
 
@@ -85,13 +88,21 @@ const QueryUrl = ({ item, collection, handleRun }) => {
   };
 
   const handleGenerateCode = (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     if (item?.request?.url !== '' || (item.draft?.request?.url !== undefined && item.draft?.request?.url !== '')) {
       setGenerateCodeItemModalOpen(true);
     } else {
       toast.error('URL is required');
     }
   };
+
+  // When a request row has sidebar keyboard focus (focusedSidebarPath === ''),
+  // CollectionItemRow owns this shortcut so the focused item is used — not the open tab.
+  const isGenerateCodeShortcutEnabled = focusedSidebarPath !== '';
+  useKeybinding('generateCode', () => {
+    handleGenerateCode();
+    return false;
+  }, { enabled: isGenerateCodeShortcutEnabled, deps: [isGenerateCodeShortcutEnabled, item] });
 
   const handleGraphqlPaste = useCallback((event) => {
     if (item.type !== 'graphql-request') {
@@ -416,7 +427,12 @@ const QueryUrl = ({ item, collection, handleRun }) => {
             showNewlineArrow={true}
           />
           <div className="flex items-center h-full mx-2 gap-3" id="request-actions">
-            <ToolHint text="Generate Code" toolhintId="http-generate-code" place="top" positionStrategy="fixed">
+            <ToolHint
+              text={generateCodeShortcut ? `Generate Code (${generateCodeShortcut})` : 'Generate Code'}
+              toolhintId="http-generate-code"
+              place="top"
+              positionStrategy="fixed"
+            >
               <div
                 className="flex items-center"
                 data-testid="generate-code-button"
@@ -427,7 +443,12 @@ const QueryUrl = ({ item, collection, handleRun }) => {
                 <IconCode color={theme.requestTabs.icon.color} strokeWidth={1.5} size={20} className="cursor-pointer" />
               </div>
             </ToolHint>
-            <ToolHint text={`Save (${saveShortcut})`} toolhintId="http-save-request" place="top" positionStrategy="fixed">
+            <ToolHint
+              text={saveShortcut ? `Save (${saveShortcut})` : 'Save'}
+              toolhintId="http-save-request"
+              place="top"
+              positionStrategy="fixed"
+            >
               <div
                 className="flex items-center"
                 data-testid="save-request-button"
