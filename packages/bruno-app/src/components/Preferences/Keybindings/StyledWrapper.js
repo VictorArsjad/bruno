@@ -19,7 +19,35 @@ const StyledWrapper = styled.div`
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     padding: 0 0px;
+  }
+
+  .section-header > span {
+    flex-shrink: 0;
+  }
+
+  .keybindings-search-input {
+    flex: 1;
+    max-width: 320px;
+    min-width: 140px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid ${(props) => props.theme.input.border};
+    border-radius: ${(props) => props.theme.border.radius.base};
+    background: ${(props) => props.theme.input.bg || props.theme.background.base};
+    color: ${(props) => props.theme.text};
+    font-size: ${(props) => props.theme.font.size.base};
+    outline: none;
+  }
+
+  .keybindings-search-input::placeholder {
+    color: ${(props) => props.theme.input.placeholder?.color || props.theme.text};
+    opacity: ${(props) => props.theme.input.placeholder?.opacity ?? 0.5};
+  }
+
+  .keybindings-search-input:focus {
+    border-color: ${(props) => props.theme.input.focusBorder || props.theme.input.border};
   }
 
   .section-actions {

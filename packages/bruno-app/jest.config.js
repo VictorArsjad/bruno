@@ -7,6 +7,7 @@ module.exports = {
     '/node_modules/(?!strip-json-comments|nanoid|xml-formatter)/'
   ],
   moduleNameMapper: {
+    '^canvas$': '<rootDir>/jest.canvasMock.js',
     '\\.(css|less|scss|sass)$': '<rootDir>/jest.cssMock.js',
     '^src/(.*)$': '<rootDir>/src/$1',
     '^assets/(.*)$': '<rootDir>/src/assets/$1',
@@ -18,6 +19,7 @@ module.exports = {
     '^providers/(.*)$': '<rootDir>/src/providers/$1',
     '^utils/(.*)$': '<rootDir>/src/utils/$1',
     '^test-utils/(.*)$': '<rootDir>/src/test-utils/$1',
+    '^ui/(.*)$': '<rootDir>/src/ui/$1',
     '^src/(.*)$': '<rootDir>/src/$1'
   },
   clearMocks: true,

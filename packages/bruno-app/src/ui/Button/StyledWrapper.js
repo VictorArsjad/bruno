@@ -243,6 +243,8 @@ const StyledWrapper = styled.div`
     .button-content {
       display: inline-flex;
       align-items: center;
+      /* Clicks must hit the <button>, not nested icon/label nodes (Electron SVG quirks). */
+      pointer-events: none;
     }
 
     .button-icon {
@@ -250,10 +252,12 @@ const StyledWrapper = styled.div`
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      pointer-events: none;
 
       svg {
         width: 100%;
         height: 100%;
+        pointer-events: none;
       }
     }
 
@@ -261,6 +265,7 @@ const StyledWrapper = styled.div`
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      pointer-events: none;
 
       .spinner-icon {
         animation: ${spin} 0.75s linear infinite;

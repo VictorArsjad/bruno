@@ -114,6 +114,26 @@ export const findParentItemInCollectionByPathname = (collection, pathname) => {
   });
 };
 
+/**
+ * Resolve an example from an item, preferring draft.examples when that list
+ * actually contains the example. Falls back to saved item.examples so a
+ * parent-request draft without (or with a stale) examples array does not hide
+ * or break Try / URL rendering.
+ */
+export const findExampleInItem = (item, exampleUid) => {
+  if (!item || !exampleUid) {
+    return undefined;
+  }
+  const draftExamples = item.draft?.examples;
+  if (Array.isArray(draftExamples)) {
+    const fromDraft = draftExamples.find((e) => e.uid === exampleUid);
+    if (fromDraft) {
+      return fromDraft;
+    }
+  }
+  return item.examples?.find((e) => e.uid === exampleUid);
+};
+
 export const findItemInCollection = (collection, itemUid) => {
   if (!collection || !collection.items) {
     return null;

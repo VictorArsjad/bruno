@@ -44,11 +44,11 @@ const Button = ({
       className={className}
     >
       <button
+        {...rest}
         type={type}
         disabled={disabled || loading}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
-        {...rest}
       >
         {loading && (
           <span className="button-spinner">

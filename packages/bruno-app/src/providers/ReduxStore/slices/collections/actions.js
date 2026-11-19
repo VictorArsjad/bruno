@@ -28,7 +28,8 @@ import {
   buildSidebarEntries,
   getVisibleSidebarUidsInOrder,
   generateTransientRequestName,
-  isPutObjectPresignedUrl
+  isPutObjectPresignedUrl,
+  findExampleInItem
 } from 'utils/collections';
 import { uuid, waitForNextTick } from 'utils/common';
 import { cancelNetworkRequest, connectWS, sendGrpcRequest, sendNetworkRequest, sendWsRequest } from 'utils/network/index';
@@ -83,7 +84,8 @@ import {
   toggleCollection,
   expandCollection,
   expandItem,
-  setSidebarSelection
+  setSidebarSelection,
+  collectionAddFileEvent
 } from './index';
 
 import { each } from 'lodash';
@@ -1413,6 +1415,9 @@ export const newHttpRequest = (options) => (dispatch, getState) => {
 
     // Get temp directory if isTransient is true
     const tempDirectory = isTransient ? state.collections.tempDirectories?.[collectionUid] : null;
+    if (isTransient && !tempDirectory) {
+      return reject(new Error('Transient request directory is not ready. Remount the collection and try again.'));
+    }
 
     // callers that already hold a full params list (e.g. "try" on a response example)
     // pass it explicitly so path param values are not lost to url parsing
@@ -1467,18 +1472,45 @@ export const newHttpRequest = (options) => (dispatch, getState) => {
       ipcRenderer
         .invoke('renderer:new-request', fullName, item)
         .then((result) => {
-          // task middleware will track this and open the new request in a new tab once request is created
+          const itemPathname = result?.pathname || fullName;
+          item.pathname = itemPathname;
+          item.filename = result?.filename || path.basename(itemPathname);
+
+          // Register the item in Redux immediately. The temp-dir chokidar watcher
+          // can miss or delay 'add' events (especially when example bodies fail to
+          // re-parse), which left Try spinning then idle with no tab.
           dispatch(
-            insertTaskIntoQueue({
-              uid: uuid(),
-              type: 'OPEN_REQUEST',
-              collectionUid,
-              itemPathname: result?.pathname || fullName,
-              preview: false,
-              ...(autoSend ? { autoSend: true } : {}),
-              ...(requestPaneTab ? { requestPaneTab } : {})
+            collectionAddFileEvent({
+              file: {
+                meta: {
+                  collectionUid,
+                  pathname: itemPathname,
+                  name: path.basename(itemPathname)
+                },
+                data: item,
+                partial: false,
+                loading: false
+              }
             })
           );
+
+          // Open (and optionally send) directly — do not wait on OPEN_REQUEST /
+          // task middleware, which also bails when mountStatus/isLoading flaps.
+          dispatch(
+            addTab({
+              uid: item.uid,
+              collectionUid,
+              type: item.type,
+              pathname: itemPathname,
+              preview: false,
+              ...(requestPaneTab ? { requestPaneTab } : {}),
+              ...(item.isTransient ? { isTransient: true } : {})
+            })
+          );
+
+          if (autoSend) {
+            dispatch(sendRequest(item, collectionUid)).catch(() => {});
+          }
           resolve();
         })
         .catch(reject);
@@ -1767,13 +1799,13 @@ export const tryResponseExample = ({ itemUid, collectionUid, exampleUid }) => (d
     return Promise.reject(new Error('Request not found'));
   }
 
-  const examples = item.draft ? get(item, 'draft.examples', []) : get(item, 'examples', []);
-  const example = find(examples, (e) => e.uid === exampleUid);
+  const example = findExampleInItem(item, exampleUid);
   if (!example) {
     return Promise.reject(new Error('Example not found'));
   }
 
-  const requestType = example.type || item.type;
+  const rawType = example.type || item.type || 'http-request';
+  const requestType = ['http', 'graphql', 'grpc', 'ws'].includes(rawType) ? `${rawType}-request` : rawType;
 
   const exampleRequest = example.request || {};
   if (!exampleRequest.url) {
@@ -1782,6 +1814,7 @@ export const tryResponseExample = ({ itemUid, collectionUid, exampleUid }) => (d
 
   const requestName = generateTransientRequestName(collection);
   const filename = sanitizeName(requestName);
+  const rawMethod = exampleRequest.method || item.request?.method || 'GET';
 
   return dispatch(
     newHttpRequest({
@@ -1789,7 +1822,7 @@ export const tryResponseExample = ({ itemUid, collectionUid, exampleUid }) => (d
       filename,
       requestType,
       requestUrl: exampleRequest.url,
-      requestMethod: exampleRequest.method || item.request?.method || 'GET',
+      requestMethod: typeof rawMethod === 'string' ? rawMethod.toUpperCase() : 'GET',
       collectionUid,
       itemUid: null,
       isTransient: true,

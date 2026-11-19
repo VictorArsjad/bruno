@@ -9,6 +9,7 @@ import ResponseExampleResponsePane from './ResponseExampleResponsePane';
 import GenerateCodeItem from 'components/Sidebar/Collections/Collection/CollectionItem/GenerateCodeItem';
 import StyledWrapper from './StyledWrapper';
 import toast from 'react-hot-toast';
+import { formatIpcError } from 'utils/common/error';
 
 const MIN_LEFT_PANE_WIDTH = 300;
 const MIN_RIGHT_PANE_WIDTH = 350;
@@ -132,9 +133,15 @@ const ResponseExample = ({ item, collection, example, openInEditMode }) => {
   };
 
   const handleTryExample = async () => {
+    if (!example?.uid || !item?.uid || !collection?.uid) {
+      toast.error('Failed to try example');
+      return;
+    }
+
+    // Show pending state before any other work so a fast failure still paints feedback.
+    setIsTryPending(true);
     // a preview example tab would otherwise be replaced by the new transient request tab
     dispatch(makeTabPermanent({ uid: example.uid }));
-    setIsTryPending(true);
     try {
       await dispatch(tryResponseExample({
         itemUid: item.uid,
@@ -142,7 +149,7 @@ const ResponseExample = ({ item, collection, example, openInEditMode }) => {
         exampleUid: example.uid
       }));
     } catch (err) {
-      toast.error(err?.message || 'Failed to try example');
+      toast.error(formatIpcError(err) || err?.message || 'Failed to try example');
     } finally {
       setIsTryPending(false);
     }
