@@ -338,6 +338,20 @@ const Keybindings = () => {
     }).filter((section) => section.rows.length > 0);
   }, [keyBindings, os]);
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredGroupedKeyMappings = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return groupedKeyMappings;
+
+    return groupedKeyMappings
+      .map((section) => ({
+        ...section,
+        rows: section.rows.filter((row) => row.name.toLowerCase().includes(q))
+      }))
+      .filter((section) => section.rows.length > 0);
+  }, [groupedKeyMappings, searchQuery]);
+
   // editingAction:
   // The row currently in edit mode.
   const [editingAction, setEditingAction] = useState(null);
@@ -595,6 +609,30 @@ const Keybindings = () => {
     }
   }, [editingAction]);
 
+  // If the row being edited is filtered out by search, cancel editing to avoid stale state.
+  useEffect(() => {
+    if (!editingAction) return;
+
+    const isVisible = filteredGroupedKeyMappings.some((section) =>
+      section.rows.some((row) => row.action === editingAction));
+
+    if (!isVisible) {
+      setErrorByAction((prev) => {
+        const next = { ...prev };
+        delete next[editingAction];
+        return next;
+      });
+      setDraftByAction((prev) => {
+        const next = { ...prev };
+        delete next[editingAction];
+        return next;
+      });
+      setRecordingAction(null);
+      setEditingAction(null);
+      pressedKeysRef.current = new Set();
+    }
+  }, [editingAction, filteredGroupedKeyMappings]);
+
   const showSuccessFlash = (action) => {
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
     setSuccessAction(action);
@@ -766,6 +804,16 @@ const Keybindings = () => {
       <div className="section-header">
         <span>Keybindings</span>
 
+        <input
+          type="text"
+          className="keybindings-search-input"
+          placeholder="Search commands…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label="Search keybinding commands"
+          data-testid="keybindings-search-input"
+        />
+
         <div className="section-actions">
           <ToggleSwitch
             isOn={keybindingsEnabled}
@@ -786,7 +834,7 @@ const Keybindings = () => {
       </div>
 
       <div className={`tables-container ${!keybindingsEnabled ? 'tables-disabled' : ''}`}>
-        {groupedKeyMappings.length > 0 ? (
+        {filteredGroupedKeyMappings.length > 0 ? (
           <div className="table-container">
             <table>
               <thead>
@@ -796,7 +844,7 @@ const Keybindings = () => {
                 </tr>
               </thead>
               <tbody>
-                {groupedKeyMappings.map((section, sectionIndex) => (
+                {filteredGroupedKeyMappings.map((section, sectionIndex) => (
                   <Fragment key={section.heading}>
                     <tr className="section-heading-row">
                       <td colSpan={2}>{section.heading}</td>
@@ -818,7 +866,7 @@ const Keybindings = () => {
                       const inputId = `kb-input-${action}`;
 
                       const isLastInSection = rowIndex === section.rows.length - 1
-                        && sectionIndex < groupedKeyMappings.length - 1;
+                        && sectionIndex < filteredGroupedKeyMappings.length - 1;
 
                       return (
                         <tr
@@ -926,7 +974,7 @@ const Keybindings = () => {
                         </tr>
                       );
                     })}
-                    {sectionIndex < groupedKeyMappings.length - 1 && (
+                    {sectionIndex < filteredGroupedKeyMappings.length - 1 && (
                       <tr className="section-spacer-row" aria-hidden="true">
                         <td colSpan={2}>&nbsp;</td>
                       </tr>
@@ -937,7 +985,9 @@ const Keybindings = () => {
             </table>
           </div>
         ) : (
-          <div className="empty-state">No key bindings available</div>
+          <div className="empty-state">
+            {searchQuery.trim() ? `No commands match "${searchQuery.trim()}"` : 'No key bindings available'}
+          </div>
         )}
       </div>
     </StyledWrapper>
