@@ -13,8 +13,10 @@ import { getInitialExampleName } from 'utils/collections/index';
 import classnames from 'classnames';
 import StyledWrapper from './StyledWrapper';
 import ActionIcon from 'ui/ActionIcon/index';
+import useKeybinding from 'hooks/useKeybinding';
+import useKeybindingDisplayText from 'hooks/useKeybindingDisplayText';
 
-const getTitleText = ({ isResponseTooLarge, isStreamingResponse }) => {
+const getTitleText = ({ isResponseTooLarge, isStreamingResponse, shortcut }) => {
   if (isStreamingResponse) {
     return 'Response Examples aren\'t supported in streaming responses yet.';
   }
@@ -23,7 +25,9 @@ const getTitleText = ({ isResponseTooLarge, isStreamingResponse }) => {
     return 'Response size exceeds 5MB limit. Cannot save as example.';
   }
 
-  return 'Save current response as example';
+  return shortcut
+    ? `Save current response as example (${shortcut})`
+    : 'Save current response as example';
 };
 
 const ResponseBookmark = forwardRef(({ item, collection, responseSize, children }, ref) => {
@@ -31,7 +35,10 @@ const ResponseBookmark = forwardRef(({ item, collection, responseSize, children 
   const [showSaveResponseExampleModal, setShowSaveResponseExampleModal] = useState(false);
   const response = item.response || {};
   const elementRef = useRef(null);
+  const getKeybindingDisplayText = useKeybindingDisplayText();
+  const shortcut = getKeybindingDisplayText('saveResponseAsExample');
 
+  const isHttpRequest = item.type === 'http-request';
   const isResponseTooLarge = responseSize >= 5 * 1024 * 1024; // 5 MB
   const isStreamingResponse = response.stream;
   const isDisabled = isResponseTooLarge || isStreamingResponse ? true : false;
@@ -41,33 +48,45 @@ const ResponseBookmark = forwardRef(({ item, collection, responseSize, children 
     isDisabled
   }), [isDisabled]);
 
-  // Only show for HTTP requests
-  if (item.type !== 'http-request') {
-    return null;
-  }
-
-  const handleSaveClick = (e) => {
+  const openSaveAsExampleModal = () => {
     if (!response || response.error) {
       toast.error('No valid response to save as example');
-      e.preventDefault();
-      e.stopPropagation();
-      return;
+      return false;
     }
 
     if (isResponseTooLarge) {
       toast.error('Response size exceeds 5MB limit. Cannot save as example.');
-      e.preventDefault();
-      e.stopPropagation();
-      return;
+      return false;
     }
 
     if (isDisabled) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
+      return false;
     }
 
     setShowSaveResponseExampleModal(true);
+    return true;
+  };
+
+  useKeybinding('saveResponseAsExample', (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    openSaveAsExampleModal();
+    return false;
+  }, {
+    enabled: isHttpRequest,
+    deps: [isHttpRequest, response, isResponseTooLarge, isDisabled]
+  });
+
+  // Only show for HTTP requests
+  if (!isHttpRequest) {
+    return null;
+  }
+
+  const handleSaveClick = (e) => {
+    if (!openSaveAsExampleModal()) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
   const saveAsExample = async (name, description = '') => {
@@ -133,7 +152,8 @@ const ResponseBookmark = forwardRef(({ item, collection, responseSize, children 
 
   const disabledMessage = getTitleText({
     isResponseTooLarge,
-    isStreamingResponse
+    isStreamingResponse,
+    shortcut
   });
 
   return (

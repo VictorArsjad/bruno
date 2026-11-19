@@ -106,6 +106,7 @@ const ResponsePaneActions = ({ item, collection, responseSize, selectedFormat, s
     {
       id: 'save-response',
       label: 'Save response',
+      shortcut: getKeybindingDisplayText('saveResponseAsExample'),
       leftSection: IconBookmark,
       get disabled() {
         return bookmarkButtonRef.current?.isDisabled ?? false;

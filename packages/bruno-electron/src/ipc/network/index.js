@@ -25,6 +25,7 @@ const { prepareRequest } = require('./prepare-request');
 const interpolateVars = require('./interpolate-vars');
 const { applyCollectionVarsToCollectionRoot } = require('./apply-collection-vars');
 const { makeAxiosInstance, completeOpenHop } = require('./axios-instance');
+const { assertShouldUseKexec, sendRequestViaKexec } = require('./kexec-transport');
 const { refreshExplicitHeaderNames } = require('@usebruno/common');
 const { resolveInheritedSettings } = require('../../utils/collection');
 const { cancelTokens, saveCancelToken, deleteCancelToken } = require('../../utils/cancel-token');
@@ -1072,20 +1073,32 @@ const registerNetworkIpc = (mainWindow) => {
       const sseChunks = [];
       reportUnresolvedVariables();
       try {
-        /** @type {import('axios').AxiosResponse} */
-        response = await axiosInstance(refreshExplicitHeaderNames(request));
-        isResponseStream = hasStreamHeaders(response.headers);
+        const preparedRequest = refreshExplicitHeaderNames(request);
+        const useKexec = assertShouldUseKexec(preparedRequest, processEnvVars);
 
-        if (!isResponseStream) {
-          response.data = await promisifyStream(response.data);
-          completeOpenHop(response.config);
+        if (useKexec) {
+          /** @type {import('axios').AxiosResponse} */
+          response = await sendRequestViaKexec(preparedRequest, processEnvVars, {
+            signal: abortController.signal
+          });
+          isResponseStream = false;
+          responseTime = measureResponseTime(response.config.metadata);
+        } else {
+          /** @type {import('axios').AxiosResponse} */
+          response = await axiosInstance(preparedRequest);
+          isResponseStream = hasStreamHeaders(response.headers);
+
+          if (!isResponseStream) {
+            response.data = await promisifyStream(response.data);
+            completeOpenHop(response.config);
+          }
+          responseTime = measureResponseTime(response.config.metadata);
         }
-        responseTime = measureResponseTime(response.config.metadata);
       } catch (error) {
         deleteCancelToken(cancelTokenUid);
 
         // if it's a cancel request, don't continue
-        if (axios.isCancel(error)) {
+        if (axios.isCancel(error) || error?.isCancel) {
           // we are not rejecting the promise here and instead returning a response object with `error` which is handled in the `send-http-request` invocation
           // timeline prop won't be accessible in the usual way in the renderer process if we reject the promise
           return {
