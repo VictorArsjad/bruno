@@ -6,7 +6,7 @@ import StyledWrapper from './StyledWrapper';
 import { useTheme } from 'providers/Theme';
 import TruncatedText from 'components/TruncatedText';
 import { updateResponseExampleName, updateResponseExampleDescription } from 'providers/ReduxStore/slices/collections';
-import get from 'lodash/get';
+import { findExampleInItem } from 'utils/collections';
 import Button from 'ui/Button';
 
 const ResponseExampleTopBar = ({
@@ -24,9 +24,7 @@ const ResponseExampleTopBar = ({
   const { theme } = useTheme();
   const dispatch = useDispatch();
 
-  const example = useMemo(() => {
-    return item.draft ? get(item, 'draft.examples', []).find((e) => e.uid === exampleUid) : get(item, 'examples', []).find((e) => e.uid === exampleUid);
-  }, [item.draft, item.examples, item, exampleUid]);
+  const example = useMemo(() => findExampleInItem(item, exampleUid), [item.draft, item.examples, item, exampleUid]);
 
   const handleGenerateCode = () => {
     if (onGenerateCode) {

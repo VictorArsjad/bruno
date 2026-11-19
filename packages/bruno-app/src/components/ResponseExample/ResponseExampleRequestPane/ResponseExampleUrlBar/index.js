@@ -4,14 +4,13 @@ import { updateResponseExampleRequest, updateResponseExampleRequestUrl } from 'p
 import SingleLineEditor from 'components/SingleLineEditor';
 import HttpMethodSelector from 'components/RequestPane/QueryUrl/HttpMethodSelector';
 import StyledWrapper from './StyledWrapper';
+import { findExampleInItem } from 'utils/collections';
 import get from 'lodash/get';
 
 const ResponseExampleUrlBar = ({ item, collection, editMode, onSave, exampleUid, allowMethodSelect = false, urlPrefix = null, highlightPathParams = true }) => {
   const dispatch = useDispatch();
 
-  const exampleData = useMemo(() => {
-    return item.draft ? get(item, 'draft.examples', []).find((e) => e.uid === exampleUid) : get(item, 'examples', []).find((e) => e.uid === exampleUid);
-  }, [item, exampleUid]);
+  const exampleData = useMemo(() => findExampleInItem(item, exampleUid), [item, exampleUid]);
   // Keep '' so HttpMethodSelector custom-method mode can clear the value while typing
   const method = get(exampleData, 'request.method') ?? 'GET';
   const url = get(exampleData, 'request.url');

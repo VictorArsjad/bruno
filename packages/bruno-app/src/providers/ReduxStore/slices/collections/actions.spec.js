@@ -31,7 +31,7 @@ describe('collection actions', () => {
   });
 
   describe('newHttpRequest', () => {
-    it('should pass requestPaneTab into the queued open request task', async () => {
+    it('should open a transient tab with requestPaneTab after IPC create', async () => {
       const dispatch = jest.fn();
       const getState = () => ({
         collections: {
@@ -86,16 +86,35 @@ describe('collection actions', () => {
         })
       );
 
-      expect(dispatch).toHaveBeenCalledWith({
-        type: 'app/insertTaskIntoQueue',
-        payload: expect.objectContaining({
-          uid: 'task-uid',
-          type: 'OPEN_REQUEST',
-          collectionUid: 'collection-uid',
-          preview: false,
-          requestPaneTab: 'body'
+      expect(dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'collections/collectionAddFileEvent',
+          payload: expect.objectContaining({
+            file: expect.objectContaining({
+              meta: expect.objectContaining({
+                collectionUid: 'collection-uid'
+              }),
+              data: expect.objectContaining({
+                uid: 'request-uid',
+                isTransient: true
+              })
+            })
+          })
         })
-      });
+      );
+
+      expect(dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'tabs/addTab',
+          payload: expect.objectContaining({
+            uid: 'request-uid',
+            collectionUid: 'collection-uid',
+            preview: false,
+            requestPaneTab: 'body',
+            isTransient: true
+          })
+        })
+      );
     });
   });
 
@@ -337,9 +356,27 @@ describe('collection actions', () => {
       }
     });
 
-    it('creates a transient request from the example and queues an auto-sent open task', async () => {
+    // Runs newHttpRequest via dispatch, but records (does not execute) nested thunks
+    // like sendRequest so auto-send does not hit the network layer in unit tests.
+    const createTryDispatch = (getState) => {
+      const dispatch = jest.fn((action) => {
+        if (typeof action !== 'function') {
+          return action;
+        }
+        return action((innerAction) => {
+          dispatch.mock.calls.push([innerAction]);
+          if (typeof innerAction === 'function') {
+            return Promise.resolve();
+          }
+          return innerAction;
+        }, getState);
+      });
+      return dispatch;
+    };
+
+    it('creates a transient request from the example, opens a tab, and auto-sends', async () => {
       const getState = () => buildState();
-      const dispatch = jest.fn((action) => (typeof action === 'function' ? action(dispatch, getState) : action));
+      const dispatch = createTryDispatch(getState);
 
       await tryResponseExample({ itemUid: 'item-uid', collectionUid: 'collection-uid', exampleUid: 'example-uid' })(dispatch, getState);
 
@@ -360,20 +397,25 @@ describe('collection actions', () => {
         })
       );
 
-      const queuedTask = dispatch.mock.calls.map(([action]) => action).find((action) => action?.type === 'app/insertTaskIntoQueue');
-      expect(queuedTask.payload).toEqual(
+      expect(dispatch.mock.calls.map(([action]) => action).some((action) => action?.type === 'collections/collectionAddFileEvent')).toBe(true);
+
+      const openedTab = dispatch.mock.calls.map(([action]) => action).find((action) => action?.type === 'tabs/addTab');
+      expect(openedTab.payload).toEqual(
         expect.objectContaining({
-          type: 'OPEN_REQUEST',
           collectionUid: 'collection-uid',
           preview: false,
-          autoSend: true
+          isTransient: true
         })
       );
+
+      const functionDispatches = dispatch.mock.calls.map(([action]) => action).filter((action) => typeof action === 'function');
+      // newHttpRequest (executed) + sendRequest (recorded, not executed)
+      expect(functionDispatches).toHaveLength(2);
     });
 
     it('numbers the request after the transient requests already open', async () => {
       const getState = () => buildState({ transientNames: ['Untitled 1', 'Untitled 2'] });
-      const dispatch = jest.fn((action) => (typeof action === 'function' ? action(dispatch, getState) : action));
+      const dispatch = createTryDispatch(getState);
 
       await tryResponseExample({ itemUid: 'item-uid', collectionUid: 'collection-uid', exampleUid: 'example-uid' })(dispatch, getState);
 
@@ -382,6 +424,62 @@ describe('collection actions', () => {
         expect.stringContaining('Untitled 3.yml'),
         expect.objectContaining({ name: 'Untitled 3' })
       );
+    });
+
+    it('falls back to item.examples when a parent draft has no usable examples list', async () => {
+      const getState = () => {
+        const state = buildState();
+        state.collections.collections[0].items[0].draft = {
+          request: { method: 'GET', url: 'https://edited.example.com' }
+          // draft.examples intentionally omitted
+        };
+        return state;
+      };
+      const dispatch = createTryDispatch(getState);
+
+      await tryResponseExample({ itemUid: 'item-uid', collectionUid: 'collection-uid', exampleUid: 'example-uid' })(dispatch, getState);
+
+      expect(window.ipcRenderer.invoke).toHaveBeenCalledWith(
+        'renderer:new-request',
+        expect.any(String),
+        expect.objectContaining({
+          request: expect.objectContaining({ url: exampleRequest.url })
+        })
+      );
+    });
+  });
+
+  describe('newHttpRequest transient directory', () => {
+    it('rejects clearly when the collection has no temp directory yet', async () => {
+      const dispatch = jest.fn();
+      const getState = () => ({
+        collections: {
+          tempDirectories: {},
+          collections: [
+            {
+              uid: 'collection-uid',
+              pathname: '/bruno/collection',
+              format: 'yml',
+              items: []
+            }
+          ]
+        }
+      });
+
+      await expect(
+        newHttpRequest({
+          requestName: 'Untitled 1',
+          filename: 'Untitled 1',
+          requestType: 'http-request',
+          requestUrl: 'https://example.com',
+          requestMethod: 'GET',
+          collectionUid: 'collection-uid',
+          itemUid: null,
+          isTransient: true
+        })(dispatch, getState)
+      ).rejects.toThrow(/Transient request directory is not ready/);
+
+      expect(window.ipcRenderer.invoke).not.toHaveBeenCalled();
     });
   });
 });
